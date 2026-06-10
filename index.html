@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة رصد السوق الذكية</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/styles.css?v=20260608a">
+</head>
+<body>
+    <div class="motion-grid" aria-hidden="true"></div>
+    <div class="app-shell">
+
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar">
+
+            <!-- Brand -->
+            <div class="sidebar-brand">
+                <p class="eyebrow">مركز الإشارات</p>
+                <h1>لوحة رصد السوق</h1>
+            </div>
+
+            <!-- Primary actions -->
+            <div class="sidebar-actions" data-page-scope="analysis-tab">
+                <button id="scan-button" class="primary">فحص الإشارة</button>
+                <button id="backtest-button" class="ghost">الاختبار العكسي</button>
+            </div>
+
+            <!-- Symbol search -->
+            <label class="symbol-search" data-page-scope="analysis-tab">
+                <input id="symbol-search" type="search" placeholder="ابحث بالرقم أو الاسم...">
+            </label>
+            <div id="symbol-list" class="symbol-list" data-page-scope="analysis-tab"></div>
+
+            <!-- Collapsible: Analysis settings -->
+            <details class="sidebar-section" data-page-scope="analysis-tab">
+                <summary class="sidebar-section-header">
+                    <span>إعدادات التحليل</span>
+                    <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </summary>
+                <div class="sidebar-section-body">
+                    <label>
+                        <span>الفترة الزمنية</span>
+                        <select id="period-select">
+                            <option value="3mo">3 أشهر</option>
+                            <option value="6mo">6 أشهر</option>
+                            <option value="1y" selected>1 سنة</option>
+                            <option value="3y">3 سنوات</option>
+                            <option value="5y">5 سنوات</option>
+                            <option value="10y">10 سنوات</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>الإطار الزمني</span>
+                        <select id="interval-select">
+                            <option value="1d" selected>يومي</option>
+                            <option value="1wk">أسبوعي</option>
+                            <option value="1mo">شهري</option>
+                        </select>
+                    </label>
+                    <button id="weekly-summary-button" class="ghost">ملخص الأسبوع الماضي</button>
+                </div>
+            </details>
+
+            <!-- Collapsible: Advanced options -->
+            <details class="sidebar-section" data-page-scope="analysis-tab">
+                <summary class="sidebar-section-header">
+                    <span>خيارات متقدمة</span>
+                    <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </summary>
+                <div class="sidebar-section-body">
+                    <div class="advanced-option">
+                        <label class="replay-toggle">
+                            <input id="replay-enabled" type="checkbox">
+                            <span>محاكاة تاريخية</span>
+                        </label>
+                        <input id="replay-slider" type="range" min="0" max="0" value="0" disabled>
+                        <p id="replay-label" class="muted-text">الريلاب غير مفعل</p>
+                    </div>
+                    <div class="advanced-option">
+                        <label class="replay-toggle">
+                            <input id="experimental-enabled" type="checkbox">
+                            <span>الاستراتيجية التجريبية</span>
+                        </label>
+                        <p id="experimental-label" class="muted-text">غير مفعلة</p>
+                    </div>
+                </div>
+            </details>
+        </aside>
+
+        <!-- ===== MAIN PANEL ===== -->
+        <main class="main-panel">
+
+            <!-- Hero stats -->
+            <section class="hero-card" data-page-scope="analysis-tab">
+                <div>
+                    <p class="eyebrow">السهم النشط</p>
+                    <h2 id="selected-symbol-title">-</h2>
+                    <p id="status-text" class="subtle">جاهز لعرض البيانات وتحليل آخر حركة.</p>
+                </div>
+                <div class="market-pulse" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="hero-stats">
+                    <div>
+                        <span>الإشارات المفتوحة</span>
+                        <strong id="open-signals">0</strong>
+                    </div>
+                    <div>
+                        <span>عدد الصفقات</span>
+                        <strong id="total-trades">0</strong>
+                    </div>
+                    <div>
+                        <span>تقدم الفحص</span>
+                        <strong id="scanner-progress">0%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab navigation -->
+            <section class="panel tab-shell">
+                <div class="tab-bar page-nav">
+                    <button type="button" class="tab-button active" data-tab-target="analysis-tab">التحليل</button>
+                    <button type="button" class="tab-button" data-tab-target="performance-tab">الأداء</button>
+                    <button type="button" class="tab-button" data-tab-target="subscribers-tab">المشتركون</button>
+                </div>
+                <div class="page-intro">
+                    <h3 id="page-title">التحليل</h3>
+                    <p id="page-description" class="subtle">راقب الشارت والصفقات الحالية والأسباب المرتبطة بكل دخول.</p>
+                </div>
+            </section>
+
+            <!-- ============================
+                 TAB: التحليل
+            ============================= -->
+            <section id="analysis-tab" class="tab-panel active">
+
+                <!-- Chart panel -->
+                <section class="panel chart-panel">
+                    <div class="panel-header">
+                        <h3>الرسم البياني</h3>
+                        <span id="last-price-badge" class="badge">-</span>
+                    </div>
+                    <div class="chart-shell">
+                        <div id="chart" class="chart-container"></div>
+                        <div id="chart-overlay" class="chart-overlay"></div>
+                    </div>
+                    <div id="active-trade-card" class="active-trade-card empty">
+                        <div>
+                            <span>الصفقة الحالية</span>
+                            <strong>لا توجد صفقة معروضة</strong>
+                        </div>
+                    </div>
+                    <div id="trade-reason-panel" class="trade-reason-panel empty">
+                        <span>سبب الدخول</span>
+                        <strong>عند ظهور صفقة ستجد هنا شرحًا واضحًا لسبب الدخول وشروطه.</strong>
+                    </div>
+                </section>
+
+                <!-- Trade log -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <h3>سجل الصفقات</h3>
+                        <button id="export-trades-button" class="ghost slim" type="button">تصدير CSV</button>
+                    </div>
+
+                    <!-- Collapsible trade filters -->
+                    <details class="inline-section">
+                        <summary class="inline-section-header">
+                            <span class="inline-section-label">تصفية الصفقات</span>
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </summary>
+                        <div class="trade-filters">
+                            <label>
+                                <span>بحث</span>
+                                <input id="trade-filter-search" type="search" placeholder="الرمز أو السبب">
+                            </label>
+                            <label>
+                                <span>الحالة</span>
+                                <select id="trade-filter-outcome">
+                                    <option value="">كل الحالات</option>
+                                    <option value="open">مفتوحة</option>
+                                    <option value="win">ناجحة</option>
+                                    <option value="loss">خاسرة</option>
+                                    <option value="expired">منتهية</option>
+                                    <option value="cancelled">ملغية</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>الاتجاه</span>
+                                <select id="trade-filter-direction">
+                                    <option value="">كل الاتجاهات</option>
+                                    <option value="long">شراء</option>
+                                    <option value="short">بيع</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>الأداء</span>
+                                <select id="trade-filter-pnl">
+                                    <option value="">كل النتائج</option>
+                                    <option value="positive">ربح</option>
+                                    <option value="negative">خسارة</option>
+                                </select>
+                            </label>
+                        </div>
+                    </details>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>الرمز</th>
+                                    <th>تاريخ الإشارة</th>
+                                    <th>الاتجاه</th>
+                                    <th>سعر التنبيه</th>
+                                    <th>الدخول</th>
+                                    <th>السعر الحالي</th>
+                                    <th>الهدف</th>
+                                    <th>وقف الخسارة</th>
+                                    <th>الحالة</th>
+                                    <th>الربح / الخسارة</th>
+                                    <th>العائد الحالي</th>
+                                    <th>أفضل حركة</th>
+                                    <th>أسوأ حركة</th>
+                                    <th>سبب الدخول</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trade-log-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================
+                 TAB: الأداء
+            ============================= -->
+            <section id="performance-tab" class="tab-panel" hidden>
+
+                <!-- KPI cards — always visible -->
+                <section class="kpi-grid">
+                    <article class="panel kpi-card">
+                        <span>نسبة النجاح</span>
+                        <strong id="win-rate">0%</strong>
+                    </article>
+                    <article class="panel kpi-card">
+                        <span>معامل الربح</span>
+                        <strong id="profit-factor">0</strong>
+                    </article>
+                    <article class="panel kpi-card">
+                        <span>صافي الربح</span>
+                        <strong id="net-profit">0</strong>
+                    </article>
+                    <article class="panel kpi-card">
+                        <span>ربح الصفقات المفتوحة</span>
+                        <strong id="current-open-pnl">0</strong>
+                    </article>
+                    <article class="panel kpi-card">
+                        <span>التوقع</span>
+                        <strong id="expectancy">0</strong>
+                    </article>
+                    <article class="panel kpi-card">
+                        <span>متوسط الربح / الخسارة</span>
+                        <strong id="avg-win-loss">0 / 0</strong>
+                    </article>
+                </section>
+
+                <!-- Detailed stats — collapsible -->
+                <section class="panel">
+                    <details class="inline-section" open>
+                        <summary class="inline-section-header">
+                            <h3 class="inline-section-title">إحصائيات الأداء</h3>
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </summary>
+                        <div class="stats-grid">
+                            <div class="stat-item"><span>إجمالي الإشارات</span><strong id="total-signals">0</strong></div>
+                            <div class="stat-item"><span>الصفقات المغلقة</span><strong id="closed-trades">0</strong></div>
+                            <div class="stat-item"><span>الرابحة / الخاسرة</span><strong id="wins-losses">0 / 0</strong></div>
+                            <div class="stat-item"><span>أفضل صفقة</span><strong id="best-trade">0</strong></div>
+                            <div class="stat-item"><span>أسوأ صفقة</span><strong id="worst-trade">0</strong></div>
+                            <div class="stat-item"><span>متوسط العائد %</span><strong id="avg-current-return-pct">0%</strong></div>
+                            <div class="stat-item"><span>متوسط أفضل حركة</span><strong id="avg-mfe">0</strong></div>
+                            <div class="stat-item"><span>متوسط أسوأ حركة</span><strong id="avg-mae">0</strong></div>
+                            <div class="stat-item"><span>بداية آخر فحص</span><strong id="scanner-started-at">-</strong></div>
+                            <div class="stat-item"><span>تقدم الفحص</span><strong id="scanner-count">0 / 0</strong></div>
+                            <div class="stat-item"><span>مدة آخر فحص</span><strong id="scanner-duration">-</strong></div>
+                        </div>
+                    </details>
+                </section>
+
+                <!-- Breakdown + equity chart -->
+                <section class="split-grid admin-top-grid">
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>تفصيل الأداء</h3>
+                        </div>
+                        <div class="table-wrapper compact">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>التصنيف</th>
+                                        <th>الصفقات المغلقة</th>
+                                        <th>الرابحة / الخاسرة</th>
+                                        <th>نسبة النجاح</th>
+                                        <th>صافي الربح</th>
+                                        <th>معامل الربح</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="performance-breakdown-body"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>العائد على المحفظة</h3>
+                        </div>
+                        <div id="equity-chart" class="mini-chart"></div>
+                    </article>
+                </section>
+
+                <!-- Weekly + monthly reports -->
+                <section class="split-grid reports-grid">
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>أفضل وأسوأ صفقات الأسبوع</h3>
+                        </div>
+                        <div id="weekly-report-cards" class="status-cards"></div>
+                    </article>
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>أفضل وأسوأ صفقات الشهر</h3>
+                        </div>
+                        <div id="monthly-report-cards" class="status-cards"></div>
+                    </article>
+                </section>
+
+                <!-- Signal output — collapsible -->
+                <section class="panel">
+                    <details class="inline-section">
+                        <summary class="inline-section-header">
+                            <h3 class="inline-section-title">آخر نتيجة فحص</h3>
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </summary>
+                        <pre id="signal-output" class="signal-output">لا توجد نتيجة بعد.</pre>
+                    </details>
+                </section>
+            </section>
+
+            <!-- ============================
+                 TAB: المشتركون
+            ============================= -->
+            <section id="subscribers-tab" class="tab-panel" hidden>
+
+                <!-- Admin login -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <h3>دخول الإدارة</h3>
+                        <button id="admin-logout-button" class="ghost slim" type="button">تسجيل الخروج</button>
+                    </div>
+                    <form id="admin-login-form">
+                        <label>
+                            <span>كلمة المرور</span>
+                            <input id="admin-password-input" type="password" autocomplete="current-password" placeholder="كلمة مرور الإدارة">
+                        </label>
+                        <button class="primary" type="submit">دخول</button>
+                    </form>
+                    <p id="admin-login-status" class="subtle"></p>
+                </section>
+
+                <!-- System status + subscriber summary -->
+                <section class="split-grid admin-top-grid">
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>حالة النظام</h3>
+                            <button id="backup-now-button" class="ghost slim">نسخة احتياطية الآن</button>
+                        </div>
+                        <div id="system-status-grid" class="status-cards"></div>
+                    </article>
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>ملخص المشتركين</h3>
+                        </div>
+                        <div id="subscriber-summary-cards" class="status-cards"></div>
+                    </article>
+                </section>
+
+                <!-- Notifications + scanner controls -->
+                <section class="split-grid admin-top-grid">
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>مركز التنبيهات</h3>
+                        </div>
+                        <div id="notification-center" class="notification-list"></div>
+                    </article>
+                    <article class="panel">
+                        <div class="panel-header">
+                            <h3>إعدادات التشغيل</h3>
+                        </div>
+                        <div class="settings-actions">
+                            <button id="scanner-start-button" class="primary" type="button">تشغيل السكانر</button>
+                            <button id="scanner-stop-button" class="ghost" type="button">إيقاف السكانر</button>
+                            <button id="scanner-scan-now-button" class="ghost" type="button">فحص الآن</button>
+                        </div>
+                        <div id="settings-summary" class="status-cards"></div>
+                    </article>
+                </section>
+
+                <!-- Live trades -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <h3>مراقبة الصفقات الحية</h3>
+                        <div class="panel-header-actions">
+                            <button id="refresh-live-trades-button" class="ghost slim" type="button">تحديث الأسعار</button>
+                            <button id="revalidate-strategy-button" class="ghost slim" type="button">مطابقة الاستراتيجية</button>
+                        </div>
+                    </div>
+                    <div id="live-trades-grid" class="live-trades-grid"></div>
+                </section>
+
+                <!-- Owner stats — collapsible -->
+                <section class="panel">
+                    <details class="inline-section">
+                        <summary class="inline-section-header">
+                            <h3 class="inline-section-title">إحصائيات المالك</h3>
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </summary>
+                        <div id="owner-stats-cards" class="status-cards"></div>
+                        <div class="table-wrapper compact">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>الفريم</th>
+                                        <th>المغلقة</th>
+                                        <th>الناجحة / الفاشلة</th>
+                                        <th>نسبة النجاح</th>
+                                        <th>رأس المال من 10000</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="owner-stats-timeframes-body"></tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>
+
+                <!-- Pending requests — collapsible -->
+                <section class="panel">
+                    <details class="inline-section">
+                        <summary class="inline-section-header">
+                            <h3 class="inline-section-title">الطلبات المعلقة</h3>
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </summary>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>الاسم</th>
+                                        <th>معرف المحادثة</th>
+                                        <th>الحالة</th>
+                                        <th>تاريخ الطلب</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-subscriber-table-body"></tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>
+
+                <!-- Subscriber management — collapsible -->
+                <section class="panel">
+                    <details class="inline-section" open>
+                        <summary class="inline-section-header">
+                            <h3 class="inline-section-title">إدارة المشتركين</h3>
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </summary>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>الدور</th>
+                                        <th>معرف المحادثة</th>
+                                        <th>الحالة</th>
+                                        <th>الدور</th>
+                                        <th>تاريخ الطلب</th>
+                                        <th>الانتهاء</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subscriber-table-body"></tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="static/script.js?v=20260520a"></script>
+</body>
+</html>
